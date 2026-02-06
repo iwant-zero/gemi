@@ -1,0 +1,27 @@
+name: Update Lotto Data
+
+on:
+  schedule:
+    - cron: '30 12 * * 6' # 매주 토요일 UTC 12:30 (한국시간 21:30)
+  workflow_dispatch: # 수동 실행 가능
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Fetch Latest Lotto
+        run: |
+          # 기존 데이터 로드 및 최신 회차 계산 (예시로 파이썬 사용 가능하나 쉘로 간략화)
+          # 실제 구현시에는 python 스크립트를 호출하여 JSON을 갱신하는 것이 안전합니다.
+          python update_lotto.py
+
+      - name: Commit and Push
+        run: |
+          git config --global user.name "LottoBot"
+          git config --global user.email "bot@github.com"
+          git add data.json
+          git commit -m "Update lotto data to latest" || exit 0
+          git push

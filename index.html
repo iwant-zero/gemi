@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 빈도 기반 로또 추천</title>
+    <style>
+        :root {
+            --ball-1: #fbc400; --ball-11: #69c8f2; --ball-21: #ff7272;
+            --ball-31: #aaa; --ball-41: #b0d840;
+        }
+        body { font-family: 'Pretendard', sans-serif; text-align: center; background: #f4f7f6; padding: 20px; }
+        .container { max-width: 600px; margin: auto; background: white; padding: 30px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+        h1 { color: #333; margin-bottom: 10px; }
+        .controls { margin-bottom: 20px; display: flex; justify-content: center; gap: 10px; }
+        button { padding: 12px 24px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.3s; }
+        .btn-generate { background: #007bff; color: white; }
+        .btn-generate:hover { background: #0056b3; }
+        
+        .lotto-row { display: flex; justify-content: center; gap: 10px; margin: 15px 0; padding: 15px; border-bottom: 1px solid #eee; }
+        .ball { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; 
+                   color: white; font-weight: bold; text-shadow: 1px 1px 2px rgba(0,0,0,0.3); font-size: 1.1rem; }
+        
+        /* 구간별 색상 */
+        .n1 { background: var(--ball-1); }
+        .n11 { background: var(--ball-11); }
+        .n21 { background: var(--ball-21); }
+        .n31 { background: var(--ball-31); }
+        .n41 { background: var(--ball-41); }
+
+        .info { font-size: 0.9rem; color: #666; margin-top: 10px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>로또 분석기</h1>
+    <p class="info">역대 당첨 데이터 빈도수 가중치 적용</p>
+    
+    <div class="controls">
+        <button class="btn-generate" onclick="generateSets(5)">5세트 생성</button>
+        <button class="btn-generate" onclick="generateSets(10)">10세트 생성</button>
+    </div>
+
+    <div id="result-area"></div>
+</div>
+
+<script>
+    let lottoData = [];
+    let frequencyMap = {};
+
+    // 1. 데이터 로드 (GitHub Repo의 data.json 호출)
+    async function loadData() {
+        try {
+            const res = await fetch('./data.json');
+            lottoData = await res.json();
+            calculateFrequency();
+        } catch (e) {
+            console.error("데이터 로드 실패, 기본값으로 작동합니다.");
+            // 데이터 없을 시 균등 빈도 생성
+            for(let i=1; i<=45; i++) frequencyMap[i] = 100; 
+        }
+    }
+
+    // 2. 빈도 분석 알고리즘
+    function calculateFrequency() {
+        frequencyMap = {};
+        for(let i=1; i<=45; i++) frequencyMap[i] = 0;
+        
+        lottoData.forEach(draw => {
+            draw.numbers.forEach(num => frequencyMap[num]++);
+        });
+    }
+
+    // 3. 가중치 기반 랜덤 번호 선택
+    function getWeightedNumber() {
+        const pool = [];
+        for (const [num, count] of Object.entries(frequencyMap)) {
+            // 빈도수만큼 배열에 숫자를 넣어 확률 조절 (가중치)
+            for (let i = 0; i < count; i++) pool.push(parseInt(num));
+        }
+        
+        const selected = new Set();
+        while(selected.size < 6) {
+            const randomIndex = Math.floor(Math.random() * pool.length);
+            selected.add(pool[randomIndex]);
+        }
+        return Array.from(selected).sort((a, b) => a - b);
+    }
+
+    // 4. UI 렌더링
+    function getBallClass(num) {
+        if (num <= 10) return 'n1';
+        if (num <= 20) return 'n11';
+        if (num <= 30) return 'n21';
+        if (num <= 40) return 'n31';
+        return 'n41';
+    }
+
+    function generateSets(count) {
+        const container = document.getElementById('result-area');
+        container.innerHTML = '';
+
+        for (let i = 0; i < count; i++) {
+            const nums = getWeightedNumber();
+            const row = document.createElement('div');
+            row.className = 'lotto-row';
+            
+            nums.forEach(n => {
+                const ball = document.createElement('div');
+                ball.className = `ball ${getBallClass(n)}`;
+                ball.innerText = n;
+                row.appendChild(ball);
+            });
+            container.appendChild(row);
+        }
+    }
+
+    loadData();
+</script>
+</body>
+</html>
